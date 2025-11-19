@@ -517,6 +517,95 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
         }
     }
 
+    // Helper enum to distinguish angular vs radial grid drawing.
+    private enum GridLineMode {
+        ANGULAR,
+        RADIAL
+    }
+
+    /**
+     * Shared helper that contains the common traversal/drawing scaffold for
+     * angular and radial grid lines. The public protected methods delegate
+     * here to avoid code duplication.
+     */
+    private void drawGridLines(Graphics2D g2,
+                               PolarPlot plot,
+                               Rectangle2D dataArea,
+                               List<?> ticks,
+                               GridLineMode mode,
+                               ValueAxis axis) {
+
+        Args.nullNotPermitted(plot, "plot");
+        Args.nullNotPermitted(axis, "axis");
+
+        // Compute the center point once for both modes.
+        double centerValue;
+        if (axis.isInverted()) {
+            centerValue = axis.getUpperBound();
+        } else {
+            centerValue = axis.getLowerBound();
+        }
+        Point center = plot.translateToJava2D(0, centerValue, axis, dataArea);
+
+        if (mode == GridLineMode.ANGULAR) {
+            // Angular: spokes and optional angle labels
+            g2.setFont(plot.getAngleLabelFont());
+            g2.setStroke(plot.getAngleGridlineStroke());
+            g2.setPaint(plot.getAngleGridlinePaint());
+
+            double outerValue;
+            if (axis.isInverted()) {
+                outerValue = axis.getLowerBound();
+            } else {
+                outerValue = axis.getUpperBound();
+            }
+
+            for (Object o : ticks) {
+                NumberTick tick = (NumberTick) o;
+                double tickVal = tick.getNumber().doubleValue();
+                Point p = plot.translateToJava2D(tickVal, outerValue, axis, dataArea);
+                g2.setPaint(plot.getAngleGridlinePaint());
+                g2.drawLine(center.x, center.y, p.x, p.y);
+
+                if (plot.isAngleLabelsVisible()) {
+                    int x = p.x;
+                    int y = p.y;
+                    g2.setPaint(plot.getAngleLabelPaint());
+                    TextUtils.drawAlignedString(tick.getText(), g2, x, y,
+                            tick.getTextAnchor());
+                }
+            }
+        } else {
+            // Radial: rings at increasing radius
+            g2.setFont(axis.getTickLabelFont());
+            g2.setPaint(plot.getRadiusGridlinePaint());
+            g2.setStroke(plot.getRadiusGridlineStroke());
+
+            for (Object o : ticks) {
+                NumberTick tick = (NumberTick) o;
+
+                double angleDegrees = plot.isCounterClockwise()
+                        ? plot.getAngleOffset()
+                        : -plot.getAngleOffset();
+
+                Point p = plot.translateToJava2D(angleDegrees,
+                        tick.getNumber().doubleValue(), axis, dataArea);
+
+                int r = p.x - center.x;
+                int upperLeftX = center.x - r;
+                int upperLeftY = center.y - r;
+                int d = 2 * r;
+
+                Ellipse2D ring = new Ellipse2D.Double(upperLeftX, upperLeftY, d, d);
+                g2.setPaint(plot.getRadiusGridlinePaint());
+                g2.draw(ring);
+            }
+        }
+    }
+
+
+
+
     /**
      * Draw the angular gridlines - the spokes.
      *
@@ -528,36 +617,11 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
     @Override
     public void drawAngularGridLines(Graphics2D g2, PolarPlot plot,
                 List ticks, Rectangle2D dataArea) {
-
-        g2.setFont(plot.getAngleLabelFont());
-        g2.setStroke(plot.getAngleGridlineStroke());
-        g2.setPaint(plot.getAngleGridlinePaint());
-
         ValueAxis axis = plot.getAxis();
-        double centerValue, outerValue;
-        if (axis.isInverted()) {
-            outerValue = axis.getLowerBound();
-            centerValue = axis.getUpperBound();
-        } else {
-            outerValue = axis.getUpperBound();
-            centerValue = axis.getLowerBound();
+        if (axis == null) {
+            return; // preserve original behaviour
         }
-        Point center = plot.translateToJava2D(0, centerValue, axis, dataArea);
-        for (Object o : ticks) {
-            NumberTick tick = (NumberTick) o;
-            double tickVal = tick.getNumber().doubleValue();
-            Point p = plot.translateToJava2D(tickVal, outerValue, axis,
-                    dataArea);
-            g2.setPaint(plot.getAngleGridlinePaint());
-            g2.drawLine(center.x, center.y, p.x, p.y);
-            if (plot.isAngleLabelsVisible()) {
-                int x = p.x;
-                int y = p.y;
-                g2.setPaint(plot.getAngleLabelPaint());
-                TextUtils.drawAlignedString(tick.getText(), g2, x, y,
-                        tick.getTextAnchor());
-            }
-        }
+        drawGridLines(g2, plot, dataArea, ticks, GridLineMode.ANGULAR, axis);
     }
 
     /**
@@ -572,34 +636,10 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
     @Override
     public void drawRadialGridLines(Graphics2D g2, PolarPlot plot, 
             ValueAxis radialAxis, List ticks, Rectangle2D dataArea) {
-
-        Args.nullNotPermitted(radialAxis, "radialAxis");
-        g2.setFont(radialAxis.getTickLabelFont());
-        g2.setPaint(plot.getRadiusGridlinePaint());
-        g2.setStroke(plot.getRadiusGridlineStroke());
-
-        double centerValue;
-        if (radialAxis.isInverted()) {
-            centerValue = radialAxis.getUpperBound();
-        } else {
-            centerValue = radialAxis.getLowerBound();
+        if (radialAxis == null) {
+            return; // preserve original behaviour
         }
-        Point center = plot.translateToJava2D(0, centerValue, radialAxis, dataArea);
-
-        for (Object o : ticks) {
-            NumberTick tick = (NumberTick) o;
-            double angleDegrees = plot.isCounterClockwise()
-                    ? plot.getAngleOffset() : -plot.getAngleOffset();
-            Point p = plot.translateToJava2D(angleDegrees,
-                    tick.getNumber().doubleValue(), radialAxis, dataArea);
-            int r = p.x - center.x;
-            int upperLeftX = center.x - r;
-            int upperLeftY = center.y - r;
-            int d = 2 * r;
-            Ellipse2D ring = new Ellipse2D.Double(upperLeftX, upperLeftY, d, d);
-            g2.setPaint(plot.getRadiusGridlinePaint());
-            g2.draw(ring);
-        }
+        drawGridLines(g2, plot, dataArea, ticks, GridLineMode.RADIAL, radialAxis);
     }
 
     /**
