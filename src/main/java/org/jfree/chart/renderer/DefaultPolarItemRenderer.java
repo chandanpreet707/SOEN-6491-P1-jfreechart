@@ -123,7 +123,13 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
      * connected or not.
      */
     private boolean connectFirstAndLastPoint;
-    
+
+    /**
+     * Flag that controls if NaN values should be hidden and a gap in the line
+     * will be drawn. If not active, NaN values will be drawn on top-left of the
+     * plot.
+     */
+    private boolean hideNaNValues;
     /**
      * A list of tool tip generators (one per series).
      */
@@ -156,7 +162,7 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
         this.legendLine = new Line2D.Double(-7.0, 0.0, 7.0, 0.0);
         this.shapesVisible = true;
         this.connectFirstAndLastPoint = true;
-        
+        this.hideNaNValues = false;
         this.toolTipGeneratorMap = new HashMap<>();
         this.urlGenerator = null;
         this.legendItemToolTipGenerator = null;
@@ -271,6 +277,29 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
      */
     public void setConnectFirstAndLastPoint(boolean connect) {
         this.connectFirstAndLastPoint = connect;
+        fireChangeEvent();
+    }
+
+    /**
+     * Returns {@code true} if NaN values should be hidden and a gap in the line
+     * will be drawn. If not active, NaN values will be drawn on top-left of the
+     * plot.
+     *
+     * @return The current status of the flag.
+     */
+    public boolean getHideNaNValues() {
+        return this.hideNaNValues;
+    }
+
+    /**
+     * Set the flag that controls whether NaN values should be hidden and a gap
+     * in the line will be drawn. If not active, NaN values will be drawn on
+     * top-left of the plot.
+     *
+     * @param hide the flag.
+     */
+    public void setHideNaNValues(boolean hide) {
+        this.hideNaNValues = hide;
         fireChangeEvent();
     }
 
@@ -425,31 +454,58 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
      */
     @Override
     public void drawSeries(Graphics2D g2, Rectangle2D dataArea,
-            PlotRenderingInfo info, PolarPlot plot, XYDataset dataset,
-            int seriesIndex) {
+                           PlotRenderingInfo info, PolarPlot plot, XYDataset dataset,
+                           int seriesIndex) {
 
         final int numPoints = dataset.getItemCount(seriesIndex);
         if (numPoints == 0) {
             return;
         }
-        GeneralPath poly = null;
+
+        GeneralPath poly = new GeneralPath();
         ValueAxis axis = plot.getAxisForDataset(plot.indexOf(dataset));
+        boolean startNewSegment = true;
+
         for (int i = 0; i < numPoints; i++) {
             double theta = dataset.getXValue(seriesIndex, i);
             double radius = dataset.getYValue(seriesIndex, i);
+
+            // Skip NaN values when the flag is active
+            if (getHideNaNValues() && (Double.isNaN(theta) || Double.isNaN(radius))) {
+                startNewSegment = true;
+                continue;
+            }
+
             Point p = plot.translateToJava2D(theta, radius, axis, dataArea);
-            if (poly == null) {
-                poly = new GeneralPath();
-                poly.moveTo(p.x, p.y);
-            }
-            else {
-                poly.lineTo(p.x, p.y);
+            if (startNewSegment) {
+                poly.moveTo(p.getX(), p.getY());
+                startNewSegment = false;
+            } else {
+                poly.lineTo(p.getX(), p.getY());
             }
         }
-        assert poly != null;
-        if (getConnectFirstAndLastPoint()) {
-            poly.closePath();
+
+        // Handle closing the polygon (connecting first and last) with NaN awareness
+        if (getConnectFirstAndLastPoint() && numPoints > 1) {
+            if (getHideNaNValues()) {
+                double thetaStart = dataset.getXValue(seriesIndex, 0);
+                double radiusStart = dataset.getYValue(seriesIndex, 0);
+
+                boolean lastXNaN = Double.isNaN(dataset.getXValue(seriesIndex, numPoints - 1));
+                boolean lastYNaN = Double.isNaN(dataset.getYValue(seriesIndex, numPoints - 1));
+
+                if (!lastXNaN && !lastYNaN
+                        && !Double.isNaN(thetaStart)
+                        && !Double.isNaN(radiusStart)) {
+                    Point p = plot.translateToJava2D(thetaStart, radiusStart, axis, dataArea);
+                    poly.lineTo(p.getX(), p.getY());
+                }
+            } else {
+                poly.closePath();
+            }
         }
+
+        // === everything below is your existing code (paint, shapes, entities) ===
 
         g2.setPaint(lookupSeriesPaint(seriesIndex));
         g2.setStroke(lookupSeriesStroke(seriesIndex));
@@ -459,19 +515,14 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
             g2.fill(poly);
             g2.setComposite(savedComposite);
             if (this.drawOutlineWhenFilled) {
-                // draw the outline of the filled polygon
                 g2.setPaint(lookupSeriesOutlinePaint(seriesIndex));
                 g2.draw(poly);
             }
-        }
-        else {
-            // just the lines, no filling
+        } else {
             g2.draw(poly);
         }
-        
-        // draw the item shapes
+
         if (this.shapesVisible) {
-            // setup for collecting optional entity info...
             EntityCollection entities = null;
             if (info != null) {
                 entities = info.getOwner().getEntityCollection();
@@ -483,20 +534,19 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
                 final float[] coords = new float[6];
                 final int segType = pi.currentSegment(coords);
                 pi.next();
-                if (segType != PathIterator.SEG_LINETO &&
-                        segType != PathIterator.SEG_MOVETO) {
+                if (segType != PathIterator.SEG_LINETO
+                        && segType != PathIterator.SEG_MOVETO) {
                     continue;
                 }
                 final int x = Math.round(coords[0]);
                 final int y = Math.round(coords[1]);
                 final Shape shape = ShapeUtils.createTranslatedShape(
-                        getItemShape(seriesIndex, i++), x,  y);
+                        getItemShape(seriesIndex, i++), x, y);
 
                 Paint paint;
                 if (useFillPaint) {
                     paint = lookupSeriesFillPaint(seriesIndex);
-                }
-                else {
+                } else {
                     paint = lookupSeriesPaint(seriesIndex);
                 }
                 g2.setPaint(paint);
@@ -507,11 +557,8 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
                     g2.draw(shape);
                 }
 
-                // add an entity for the item, but only if it falls within the
-                // data area...
-                if (entities != null && ShapeUtils.isPointInRect(dataArea, x, 
-                        y)) {
-                    addEntity(entities, shape, dataset, seriesIndex, i-1, x, y);
+                if (entities != null && ShapeUtils.isPointInRect(dataArea, x, y)) {
+                    addEntity(entities, shape, dataset, seriesIndex, i - 1, x, y);
                 }
             }
         }
@@ -828,6 +875,9 @@ public class DefaultPolarItemRenderer extends AbstractRenderer
             return false;
         }
         if (this.connectFirstAndLastPoint != that.connectFirstAndLastPoint) {
+            return false;
+        }
+        if (this.hideNaNValues != that.hideNaNValues) {
             return false;
         }
         if (!this.toolTipGeneratorMap.equals(that.toolTipGeneratorMap)) {
