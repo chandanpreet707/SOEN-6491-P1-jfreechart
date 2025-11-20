@@ -882,8 +882,9 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
      *
      * @return A list of ticks.
      */
+
     protected List refreshTicksHorizontal(Graphics2D g2,
-            Rectangle2D dataArea, RectangleEdge edge) {
+                                          Rectangle2D dataArea, RectangleEdge edge) {
 
         List result = new java.util.ArrayList();
 
@@ -904,8 +905,9 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
             if (minorTickSpaces <= 0) {
                 minorTickSpaces = tu.getMinorTickCount();
             }
+            // minor ticks BEFORE the first major tick
             for (int minorTick = 1; minorTick < minorTickSpaces; minorTick++) {
-                double minorTickValue = lowestTickValue 
+                double minorTickValue = lowestTickValue
                         - size * minorTick / minorTickSpaces;
                 if (getRange().contains(minorTickValue)) {
                     result.add(new NumberTick(TickType.MINOR, minorTickValue,
@@ -913,34 +915,49 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
                             0.0));
                 }
             }
+
+            // major ticks
             for (int i = 0; i < count; i++) {
                 double currentTickValue = lowestTickValue + (i * size);
                 String tickLabel;
                 NumberFormat formatter = getNumberFormatOverride();
                 if (formatter != null) {
                     tickLabel = formatter.format(currentTickValue);
-                }
-                else {
+                } else {
                     tickLabel = getTickUnit().valueToString(currentTickValue);
                 }
-                TextAnchor anchor, rotationAnchor;
-                double angle = 0.0;
+
+                // NEW PART: compute angle and anchors
+                double angle = getTickLabelRotationAngle();
+                TextAnchor anchor;
+                TextAnchor rotationAnchor;
+
                 if (isVerticalTickLabels()) {
-                    anchor = TextAnchor.CENTER_RIGHT;
-                    rotationAnchor = TextAnchor.CENTER_RIGHT;
+                    // preserve legacy vertical-tick behaviour
                     if (edge == RectangleEdge.TOP) {
+                        anchor = TextAnchor.CENTER_RIGHT;
+                        rotationAnchor = TextAnchor.CENTER_RIGHT;
                         angle = Math.PI / 2.0;
-                    }
-                    else {
+                    } else { // BOTTOM
+                        anchor = TextAnchor.CENTER_RIGHT;
+                        rotationAnchor = TextAnchor.CENTER_RIGHT;
                         angle = -Math.PI / 2.0;
                     }
-                }
-                else {
+                } else if (angle != 0.0) {
+                    // custom rotation via tickLabelRotationAngle
+                    if (edge == RectangleEdge.TOP) {
+                        anchor = TextAnchor.BOTTOM_RIGHT;
+                        rotationAnchor = TextAnchor.BOTTOM_RIGHT;
+                    } else { // BOTTOM
+                        anchor = TextAnchor.TOP_RIGHT;
+                        rotationAnchor = TextAnchor.TOP_RIGHT;
+                    }
+                } else {
+                    // original horizontal labels
                     if (edge == RectangleEdge.TOP) {
                         anchor = TextAnchor.BOTTOM_CENTER;
                         rotationAnchor = TextAnchor.BOTTOM_CENTER;
-                    }
-                    else {
+                    } else { // BOTTOM
                         anchor = TextAnchor.TOP_CENTER;
                         rotationAnchor = TextAnchor.TOP_CENTER;
                     }
@@ -949,9 +966,11 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
                 Tick tick = new NumberTick(currentTickValue,
                         tickLabel, anchor, rotationAnchor, angle);
                 result.add(tick);
+
+                // minor ticks AFTER this major tick and before the next one
                 double nextTickValue = lowestTickValue + ((i + 1) * size);
                 for (int minorTick = 1; minorTick < minorTickSpaces;
-                        minorTick++) {
+                     minorTick++) {
                     double minorTickValue = currentTickValue
                             + (nextTickValue - currentTickValue)
                             * minorTick / minorTickSpaces;
@@ -964,7 +983,6 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
             }
         }
         return result;
-
     }
 
     /**

@@ -185,6 +185,11 @@ public abstract class ValueAxis extends Axis
 
     /** A flag indicating whether tick labels are rotated to vertical. */
     private boolean verticalTickLabels;
+    /**
+     * The rotation angle (in radians) for tick labels along this axis.
+     * A value of 0.0 means no extra rotation.
+     */
+    private double tickLabelRotationAngle;
 
     /**
      * Constructs a value axis.
@@ -276,6 +281,30 @@ public abstract class ValueAxis extends Axis
             fireChangeEvent();
         }
     }
+
+    /**
+     * Returns the rotation angle for the tick labels (in radians).
+     *
+     * @return The rotation angle.
+     */
+    public double getTickLabelRotationAngle() {
+        return this.tickLabelRotationAngle;
+    }
+
+    /**
+     * Sets the rotation angle for the tick labels (in radians) and notifies
+     * listeners if it changes.
+     *
+     * @param angle  the new rotation angle.
+     */
+    public void setTickLabelRotationAngle(double angle) {
+        if (this.tickLabelRotationAngle != angle) {
+            this.tickLabelRotationAngle = angle;
+            notifyListeners(new AxisChangeEvent(this));
+        }
+    }
+
+
 
     /**
      * Returns a flag that controls whether the axis line has an arrow
