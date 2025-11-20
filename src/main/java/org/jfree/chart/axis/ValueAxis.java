@@ -50,6 +50,7 @@ import org.jfree.chart.plot.Plot;
 import org.jfree.chart.text.TextUtils;
 import org.jfree.chart.util.AttrStringUtils;
 import org.jfree.data.Range;
+import org.jfree.chart.text.TextAnchor;
 
 import java.awt.*;
 import java.awt.font.LineMetrics;
@@ -569,6 +570,58 @@ public abstract class ValueAxis extends Axis
         }
         return result;
     }
+
+    /**
+     * Simple holder for tick label positioning along a horizontal axis.
+     */
+    protected static class TickLabelPosition {
+
+        public final TextAnchor anchor;
+        public final TextAnchor rotationAnchor;
+        public final double angle;
+
+        public TickLabelPosition(TextAnchor anchor,
+                                 TextAnchor rotationAnchor, double angle) {
+            this.anchor = anchor;
+            this.rotationAnchor = rotationAnchor;
+            this.angle = angle;
+        }
+    }
+
+    /**
+     * Calculates the text anchor, rotation anchor and angle for horizontal
+     * tick labels based on the edge and the verticalTickLabels flag.
+     *
+     * @param edge  the edge on which the axis is drawn.
+     *
+     * @return The tick label position (never {@code null}).
+     */
+    protected TickLabelPosition calculateHorizontalTickLabelPosition(
+            RectangleEdge edge) {
+        TextAnchor anchor;
+        TextAnchor rotationAnchor;
+        double angle = 0.0;
+        if (isVerticalTickLabels()) {
+            anchor = TextAnchor.CENTER_RIGHT;
+            rotationAnchor = TextAnchor.CENTER_RIGHT;
+            if (edge == RectangleEdge.TOP) {
+                angle = Math.PI / 2.0;
+            } else {
+                angle = -Math.PI / 2.0;
+            }
+        } else {
+            if (edge == RectangleEdge.TOP) {
+                anchor = TextAnchor.BOTTOM_CENTER;
+                rotationAnchor = TextAnchor.BOTTOM_CENTER;
+            } else {
+                anchor = TextAnchor.TOP_CENTER;
+                rotationAnchor = TextAnchor.TOP_CENTER;
+            }
+        }
+        return new TickLabelPosition(anchor, rotationAnchor, angle);
+    }
+
+
 
     /**
      * Draws the axis line, tick marks and tick mark labels.
@@ -1363,6 +1416,23 @@ public abstract class ValueAxis extends Axis
         this.minorTickCount = count;
         fireChangeEvent();
     }
+
+    /**
+     * Resolves the number of minor tick spaces, preferring an explicit
+     * minorTickCount on the axis and falling back to the tick unit.
+     *
+     * @param unit  the tick unit (may be {@code null}).
+     *
+     * @return The resolved minor tick spaces (possibly zero).
+     */
+    protected int resolveMinorTickSpaces(TickUnit unit) {
+        int minorTickSpaces = getMinorTickCount();
+        if (minorTickSpaces <= 0 && unit != null) {
+            minorTickSpaces = unit.getMinorTickCount();
+        }
+        return minorTickSpaces;
+    }
+
 
     /**
      * Converts a data value to a coordinate in Java2D space, assuming that the

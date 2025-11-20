@@ -1474,10 +1474,8 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
             long lowestTickTime = tickDate.getTime();
             long distance = unit.addToDate(tickDate, this.timeZone).getTime()
                     - lowestTickTime;
-            int minorTickSpaces = getMinorTickCount();
-            if (minorTickSpaces <= 0) {
-                minorTickSpaces = unit.getMinorTickCount();
-            }
+            int minorTickSpaces = resolveMinorTickSpaces(unit);
+
             for (int minorTick = 1; minorTick < minorTickSpaces; minorTick++) {
                 long minorTickTime = lowestTickTime - distance
                         * minorTick / minorTickSpaces;
@@ -1499,31 +1497,12 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
                 else {
                     tickLabel = this.tickUnit.dateToString(tickDate);
                 }
-                TextAnchor anchor, rotationAnchor;
-                double angle = 0.0;
-                if (isVerticalTickLabels()) {
-                    anchor = TextAnchor.CENTER_RIGHT;
-                    rotationAnchor = TextAnchor.CENTER_RIGHT;
-                    if (edge == RectangleEdge.TOP) {
-                        angle = Math.PI / 2.0;
-                    }
-                    else {
-                        angle = -Math.PI / 2.0;
-                    }
-                }
-                else {
-                    if (edge == RectangleEdge.TOP) {
-                        anchor = TextAnchor.BOTTOM_CENTER;
-                        rotationAnchor = TextAnchor.BOTTOM_CENTER;
-                    }
-                    else {
-                        anchor = TextAnchor.TOP_CENTER;
-                        rotationAnchor = TextAnchor.TOP_CENTER;
-                    }
-                }
+                TickLabelPosition pos = calculateHorizontalTickLabelPosition(edge);
 
-                DateTick tick = new DateTick(tickDate, tickLabel, anchor,
-                        rotationAnchor, angle);
+                DateTick tick = new DateTick(tickDate, tickLabel,
+                        pos.anchor, pos.rotationAnchor, pos.angle);
+
+
                 result.add(tick);
                 hasRolled = false;
 

@@ -517,33 +517,26 @@ public class SymbolAxis extends NumberAxis implements Serializable {
                 NumberFormat formatter = getNumberFormatOverride();
                 if (formatter != null) {
                     tickLabel = formatter.format(currentTickValue);
-                }
-                else {
+                } else {
                     tickLabel = valueToString(currentTickValue);
                 }
 
-                // avoid to draw overlapping tick labels
-                Rectangle2D bounds = TextUtils.getTextBounds(tickLabel, g2,
-                        g2.getFontMetrics());
-                double tickLabelLength = isVerticalTickLabels()
-                        ? bounds.getHeight() : bounds.getWidth();
-                boolean tickLabelsOverlapping = false;
-                if (i > 0) {
-                    double avgTickLabelLength = (previousDrawnTickLabelLength
-                            + tickLabelLength) / 2.0;
-                    if (Math.abs(xx - previousDrawnTickLabelPos)
-                            < avgTickLabelLength) {
-                        tickLabelsOverlapping = true;
-                    }
-                }
-                if (tickLabelsOverlapping) {
-                    tickLabel = ""; // don't draw this tick label
-                }
-                else {
-                    // remember these values for next comparison
-                    previousDrawnTickLabelPos = xx;
-                    previousDrawnTickLabelLength = tickLabelLength;
-                }
+                // avoid drawing overlapping tick labels using shared helper
+                boolean isFirstTick = (i == 0);
+                ValueAxis.TickLabelOverlapState overlapState
+                        = handleHorizontalTickOverlap(
+                        g2,
+                        tickLabel,
+                        xx,
+                        isVerticalTickLabels(),
+                        previousDrawnTickLabelPos,
+                        previousDrawnTickLabelLength,
+                        isFirstTick
+                );
+                tickLabel = overlapState.getLabelToDraw();
+                previousDrawnTickLabelPos = overlapState.getLastDrawnPosition();
+                previousDrawnTickLabelLength = overlapState.getLastDrawnLength();
+
 
                 TextAnchor anchor;
                 TextAnchor rotationAnchor;
@@ -616,28 +609,22 @@ public class SymbolAxis extends NumberAxis implements Serializable {
                     tickLabel = valueToString(currentTickValue);
                 }
 
-                // avoid to draw overlapping tick labels
-                Rectangle2D bounds = TextUtils.getTextBounds(tickLabel, g2,
-                        g2.getFontMetrics());
-                double tickLabelLength = isVerticalTickLabels()
-                    ? bounds.getWidth() : bounds.getHeight();
-                boolean tickLabelsOverlapping = false;
-                if (i > 0) {
-                    double avgTickLabelLength = (previousDrawnTickLabelLength
-                            + tickLabelLength) / 2.0;
-                    if (Math.abs(yy - previousDrawnTickLabelPos)
-                            < avgTickLabelLength) {
-                        tickLabelsOverlapping = true;
-                    }
-                }
-                if (tickLabelsOverlapping) {
-                    tickLabel = ""; // don't draw this tick label
-                }
-                else {
-                    // remember these values for next comparison
-                    previousDrawnTickLabelPos = yy;
-                    previousDrawnTickLabelLength = tickLabelLength;
-                }
+                // avoid drawing overlapping tick labels using shared helper
+                boolean isFirstTick = (i == 0);
+                ValueAxis.TickLabelOverlapState overlapState
+                        = handleVerticalTickOverlap(
+                        g2,
+                        tickLabel,
+                        yy,
+                        isVerticalTickLabels(),
+                        previousDrawnTickLabelPos,
+                        previousDrawnTickLabelLength,
+                        isFirstTick
+                );
+                tickLabel = overlapState.getLabelToDraw();
+                previousDrawnTickLabelPos = overlapState.getLastDrawnPosition();
+                previousDrawnTickLabelLength = overlapState.getLastDrawnLength();
+
 
                 TextAnchor anchor;
                 TextAnchor rotationAnchor;

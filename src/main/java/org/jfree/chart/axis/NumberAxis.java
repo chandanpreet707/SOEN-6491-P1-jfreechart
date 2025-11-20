@@ -900,10 +900,8 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
         double lowestTickValue = calculateLowestVisibleTickValue();
 
         if (count <= ValueAxis.MAXIMUM_TICK_COUNT) {
-            int minorTickSpaces = getMinorTickCount();
-            if (minorTickSpaces <= 0) {
-                minorTickSpaces = tu.getMinorTickCount();
-            }
+            int minorTickSpaces = resolveMinorTickSpaces(tu);
+
             for (int minorTick = 1; minorTick < minorTickSpaces; minorTick++) {
                 double minorTickValue = lowestTickValue 
                         - size * minorTick / minorTickSpaces;
@@ -923,31 +921,12 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
                 else {
                     tickLabel = getTickUnit().valueToString(currentTickValue);
                 }
-                TextAnchor anchor, rotationAnchor;
-                double angle = 0.0;
-                if (isVerticalTickLabels()) {
-                    anchor = TextAnchor.CENTER_RIGHT;
-                    rotationAnchor = TextAnchor.CENTER_RIGHT;
-                    if (edge == RectangleEdge.TOP) {
-                        angle = Math.PI / 2.0;
-                    }
-                    else {
-                        angle = -Math.PI / 2.0;
-                    }
-                }
-                else {
-                    if (edge == RectangleEdge.TOP) {
-                        anchor = TextAnchor.BOTTOM_CENTER;
-                        rotationAnchor = TextAnchor.BOTTOM_CENTER;
-                    }
-                    else {
-                        anchor = TextAnchor.TOP_CENTER;
-                        rotationAnchor = TextAnchor.TOP_CENTER;
-                    }
-                }
+                TickLabelPosition pos = calculateHorizontalTickLabelPosition(edge);
 
                 Tick tick = new NumberTick(currentTickValue,
-                        tickLabel, anchor, rotationAnchor, angle);
+                        tickLabel, pos.anchor, pos.rotationAnchor, pos.angle);
+
+
                 result.add(tick);
                 double nextTickValue = lowestTickValue + ((i + 1) * size);
                 for (int minorTick = 1; minorTick < minorTickSpaces;
