@@ -987,6 +987,56 @@ public class CategoryAxis extends Axis implements Cloneable, Serializable {
     }
 
     /**
+     * Draws the tick label for a single category into the given area.
+     *
+     * @param g2         the graphics device.
+     * @param tick       the category tick.
+     * @param position   the label position for this edge.
+     * @param labelArea  the label band area for this category.
+     * @param plotState  plot rendering info (may be {@code null}).
+     */
+    protected void drawCategoryLabel(Graphics2D g2,
+                                     CategoryTick tick,
+                                     CategoryLabelPosition position,
+                                     Rectangle2D labelArea,
+                                     PlotRenderingInfo plotState) {
+
+        // apply per-category font and paint
+        g2.setFont(getTickLabelFont(tick.getCategory()));
+        g2.setPaint(getTickLabelPaint(tick.getCategory()));
+
+        Point2D anchorPoint = position.getCategoryAnchor()
+                .getAnchorPoint(labelArea);
+        TextBlock block = tick.getLabel();
+
+        block.draw(g2,
+                (float) anchorPoint.getX(),
+                (float) anchorPoint.getY(),
+                position.getLabelAnchor(),
+                (float) anchorPoint.getX(),
+                (float) anchorPoint.getY(),
+                position.getAngle());
+
+        Shape bounds = block.calculateBounds(g2,
+                (float) anchorPoint.getX(),
+                (float) anchorPoint.getY(),
+                position.getLabelAnchor(),
+                (float) anchorPoint.getX(),
+                (float) anchorPoint.getY(),
+                position.getAngle());
+
+        if (plotState != null && plotState.getOwner() != null) {
+            EntityCollection entities = plotState.getOwner()
+                    .getEntityCollection();
+            if (entities != null) {
+                String tooltip = getCategoryLabelToolTip(tick.getCategory());
+                String url = getCategoryLabelURL(tick.getCategory());
+                entities.add(new CategoryLabelEntity(tick.getCategory(),
+                        bounds, tooltip, url));
+            }
+        }
+    }
+    /**
      * Moves the cursor after labels have been drawn, based on the band
      * dimension and the same offset used when computing the label area.
      *
@@ -1015,18 +1065,18 @@ public class CategoryAxis extends Axis implements Cloneable, Serializable {
      *
      * @param g2  the graphics device ({@code null} not permitted).
      * @param plotArea  the plot area ({@code null} not permitted).
-     * @param dataArea  the area inside the axes ({@code null} not
-     *                  permitted).
+     * @param dataArea  the area inside the axes ({@code null}
+     *                  not permitted).
      * @param edge  the axis location ({@code null} not permitted).
      * @param state  the axis state ({@code null} not permitted).
-     * @param plotState  collects information about the plot ({@code null}
-     *                   permitted).
+     * @param plotState  collects information about the plot
+     *                   ({@code null} permitted).
      *
      * @return The updated axis state (never {@code null}).
      */
     protected AxisState drawCategoryLabels(Graphics2D g2, Rectangle2D plotArea,
-            Rectangle2D dataArea, RectangleEdge edge, AxisState state,
-            PlotRenderingInfo plotState) {
+                                           Rectangle2D dataArea, RectangleEdge edge, AxisState state,
+                                           PlotRenderingInfo plotState) {
 
         Args.nullNotPermitted(state, "state");
         if (!isTickLabelsVisible()) {
@@ -1041,9 +1091,6 @@ public class CategoryAxis extends Axis implements Cloneable, Serializable {
 
         for (Object o : ticks) {
             CategoryTick tick = (CategoryTick) o;
-            g2.setFont(getTickLabelFont(tick.getCategory()));
-            g2.setPaint(getTickLabelPaint(tick.getCategory()));
-
             CategoryLabelPosition position
                     = this.categoryLabelPositions.getLabelPosition(edge);
 
@@ -1058,34 +1105,7 @@ public class CategoryAxis extends Axis implements Cloneable, Serializable {
                     false // keep original RIGHT-edge behaviour for CategoryAxis
             );
 
-            Point2D anchorPoint = position.getCategoryAnchor()
-                    .getAnchorPoint(area);
-            TextBlock block = tick.getLabel();
-            block.draw(g2,
-                    (float) anchorPoint.getX(),
-                    (float) anchorPoint.getY(),
-                    position.getLabelAnchor(),
-                    (float) anchorPoint.getX(),
-                    (float) anchorPoint.getY(),
-                    position.getAngle());
-            Shape bounds = block.calculateBounds(g2,
-                    (float) anchorPoint.getX(),
-                    (float) anchorPoint.getY(),
-                    position.getLabelAnchor(),
-                    (float) anchorPoint.getX(),
-                    (float) anchorPoint.getY(),
-                    position.getAngle());
-            if (plotState != null && plotState.getOwner() != null) {
-                EntityCollection entities = plotState.getOwner()
-                        .getEntityCollection();
-                if (entities != null) {
-                    String tooltip = getCategoryLabelToolTip(
-                            tick.getCategory());
-                    String url = getCategoryLabelURL(tick.getCategory());
-                    entities.add(new CategoryLabelEntity(tick.getCategory(),
-                            bounds, tooltip, url));
-                }
-            }
+            drawCategoryLabel(g2, tick, position, area, plotState);
             categoryIndex++;
         }
 

@@ -211,6 +211,45 @@ public class SubCategoryAxis extends CategoryAxis
     }
 
     /**
+     * Draws a single sub-category label at the specified coordinates.
+     */
+    private void drawSingleSubCategoryLabel(Graphics2D g2,
+                                            String label,
+                                            float xx, float yy) {
+        TextUtils.drawRotatedString(label, g2, xx, yy,
+                TextAnchor.CENTER, 0.0, TextAnchor.CENTER);
+    }
+    /**
+     * Draws all sub-category labels within the given category band area.
+     */
+    private void drawAllSubCategoryLabelsInBand(Graphics2D g2,
+                                                Rectangle2D area,
+                                                RectangleEdge edge) {
+
+        double x0 = area.getX();
+        double x1 = x0 + area.getWidth();
+        double y0 = area.getY();
+        double y1 = y0 + area.getHeight();
+
+        int subCategoryCount = this.subCategories.size();
+        float width = (float) ((x1 - x0) / subCategoryCount);
+        float height = (float) ((y1 - y0) / subCategoryCount);
+
+        for (int i = 0; i < subCategoryCount; i++) {
+            float xx, yy;
+            if (RectangleEdge.isTopOrBottom(edge)) {
+                xx = (float) (x0 + (i + 0.5) * width);
+                yy = (float) area.getCenterY();
+            } else {
+                xx = (float) area.getCenterX();
+                yy = (float) (y0 + (i + 0.5) * height);
+            }
+            drawSingleSubCategoryLabel(g2,
+                    this.subCategories.get(i).toString(), xx, yy);
+        }
+    }
+
+    /**
      * Draws the axis on a Java 2D graphics device (such as the screen or a
      * printer).
      *
@@ -279,6 +318,7 @@ public class SubCategoryAxis extends CategoryAxis
         g2.setFont(this.subLabelFont);
         g2.setPaint(this.subLabelPaint);
         CategoryPlot plot = (CategoryPlot) getPlot();
+
         int categoryCount = 0;
         CategoryDataset dataset = plot.getDataset();
         if (dataset != null) {
@@ -286,8 +326,8 @@ public class SubCategoryAxis extends CategoryAxis
         }
 
         double maxdim = getMaxDim(g2, edge);
-        for (int categoryIndex = 0; categoryIndex < categoryCount;
-             categoryIndex++) {
+
+        for (int categoryIndex = 0; categoryIndex < categoryCount; categoryIndex++) {
 
             Rectangle2D area = createCategoryLabelArea(
                     dataArea,
@@ -297,30 +337,11 @@ public class SubCategoryAxis extends CategoryAxis
                     categoryCount,
                     maxdim,
                     0.0,
-                    true // SubCategoryAxis expands RIGHT from the cursor
+                    true // SubCategoryAxis expands right from cursor
             );
 
-            double x0 = area.getX();
-            double x1 = x0 + area.getWidth();
-            double y0 = area.getY();
-            double y1 = y0 + area.getHeight();
-
-            int subCategoryCount = this.subCategories.size();
-            float width = (float) ((x1 - x0) / subCategoryCount);
-            float height = (float) ((y1 - y0) / subCategoryCount);
-            float xx, yy;
-            for (int i = 0; i < subCategoryCount; i++) {
-                if (RectangleEdge.isTopOrBottom(edge)) {
-                    xx = (float) (x0 + (i + 0.5) * width);
-                    yy = (float) area.getCenterY();
-                } else {
-                    xx = (float) area.getCenterX();
-                    yy = (float) (y0 + (i + 0.5) * height);
-                }
-                String label = this.subCategories.get(i).toString();
-                TextUtils.drawRotatedString(label, g2, xx, yy,
-                        TextAnchor.CENTER, 0.0, TextAnchor.CENTER);
-            }
+            // NEW: delegate drawing into helper
+            drawAllSubCategoryLabelsInBand(g2, area, edge);
         }
 
         updateCursorForCategoryLabels(state, edge, maxdim, 0.0);
