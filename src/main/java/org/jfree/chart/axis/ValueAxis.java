@@ -100,6 +100,37 @@ public abstract class ValueAxis extends Axis
     public static final int MAXIMUM_TICK_COUNT = 500;
 
     /**
+     * Helper state object used to handle tick label overlap on axes.
+     */
+    public static class TickLabelOverlapState {
+
+        private final String labelToDraw;
+        private final double lastDrawnPosition;
+        private final double lastDrawnLength;
+
+        public TickLabelOverlapState(String labelToDraw,
+                                     double lastDrawnPosition,
+                                     double lastDrawnLength) {
+            this.labelToDraw = labelToDraw;
+            this.lastDrawnPosition = lastDrawnPosition;
+            this.lastDrawnLength = lastDrawnLength;
+        }
+
+        public String getLabelToDraw() {
+            return labelToDraw;
+        }
+
+        public double getLastDrawnPosition() {
+            return lastDrawnPosition;
+        }
+
+        public double getLastDrawnLength() {
+            return lastDrawnLength;
+        }
+    }
+
+
+    /**
      * A flag that controls whether an arrow is drawn at the positive end of
      * the axis line.
      */
@@ -896,6 +927,8 @@ public abstract class ValueAxis extends Axis
         return maxWidth;
 
     }
+
+
 
     /**
      * Returns a flag that controls the direction of values on the axis.
@@ -1737,6 +1770,93 @@ public abstract class ValueAxis extends Axis
         this.downArrow = SerialUtils.readShape(stream);
         this.leftArrow = SerialUtils.readShape(stream);
         this.rightArrow = SerialUtils.readShape(stream);
+    }
+    /**
+     * Helper to avoid drawing overlapping tick labels for horizontal axes.
+     */
+    protected TickLabelOverlapState handleHorizontalTickOverlap(
+            Graphics2D g2,
+            String tickLabel,
+            double xx,
+            boolean verticalTickLabels,
+            double previousDrawnTickLabelPos,
+            double previousDrawnTickLabelLength,
+            boolean isFirstTick) {
+
+        double tickLabelLength = 0.0;
+        if (tickLabel != null && !tickLabel.isEmpty()) {
+            if (verticalTickLabels) {
+                tickLabelLength = g2.getFontMetrics().getHeight();
+            } else {
+                tickLabelLength = g2.getFontMetrics().stringWidth(tickLabel);
+            }
+        }
+
+        if (!isFirstTick) {
+            double gap = Math.abs(xx - previousDrawnTickLabelPos);
+            double minAllowedGap = previousDrawnTickLabelLength / 2.0
+                    + tickLabelLength / 2.0;
+
+            if (gap < minAllowedGap) {
+                // overlap → skip this label, keep previous state
+                return new TickLabelOverlapState(
+                        "",
+                        previousDrawnTickLabelPos,
+                        previousDrawnTickLabelLength
+                );
+            }
+        }
+
+        // no overlap → draw this label and update state
+        return new TickLabelOverlapState(
+                tickLabel,
+                xx,
+                tickLabelLength
+        );
+    }
+
+    /**
+     * Helper to avoid drawing overlapping tick labels for vertical axes.
+     */
+    protected TickLabelOverlapState handleVerticalTickOverlap(
+            Graphics2D g2,
+            String tickLabel,
+            double yy,
+            boolean verticalTickLabels,
+            double previousDrawnTickLabelPos,
+            double previousDrawnTickLabelLength,
+            boolean isFirstTick) {
+
+        double tickLabelLength = 0.0;
+        if (tickLabel != null && !tickLabel.isEmpty()) {
+            if (verticalTickLabels) {
+                tickLabelLength = g2.getFontMetrics().stringWidth(tickLabel);
+            } else {
+                tickLabelLength = g2.getFontMetrics().getHeight();
+            }
+        }
+
+        if (!isFirstTick) {
+            double gap = Math.abs(yy - previousDrawnTickLabelPos);
+            double minAllowedGap = previousDrawnTickLabelLength / 2.0
+                    + tickLabelLength / 2.0;
+
+            if (gap < minAllowedGap) {
+                // overlap → skip this label, keep previous state
+                return new TickLabelOverlapState(
+                        "",
+                        previousDrawnTickLabelPos,
+                        previousDrawnTickLabelLength
+                );
+            }
+        }
+
+        // no overlap → draw this label and update state
+        return new TickLabelOverlapState(
+                tickLabel,
+                yy,
+                tickLabelLength
+        );
     }
 
 }
