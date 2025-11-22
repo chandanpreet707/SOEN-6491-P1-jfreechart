@@ -1500,8 +1500,10 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
      *
      * @return A list of ticks.
      */
+
+
     protected List<? extends Tick> refreshTicksHorizontal(Graphics2D g2,
-                Rectangle2D dataArea, RectangleEdge edge) {
+                                                          Rectangle2D dataArea, RectangleEdge edge) {
 
         List<DateTick> result = new ArrayList<>();
 
@@ -1521,7 +1523,7 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
             // could add a flag to make the following correction optional...
             if (!hasRolled) {
                 tickDate = correctTickDateForPosition(tickDate, unit,
-                     this.tickMarkPosition);
+                        this.tickMarkPosition);
             }
 
             long lowestTickTime = tickDate.getTime();
@@ -1535,8 +1537,8 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
                 if (minorTickTime > 0 && getRange().contains(minorTickTime)
                         && (!isHiddenValue(minorTickTime))) {
                     result.add(new DateTick(TickType.MINOR,
-                            new Date(minorTickTime), "", TextAnchor.TOP_CENTER,
-                            TextAnchor.CENTER, 0.0));
+                            new Date(minorTickTime), "",
+                            TextAnchor.TOP_CENTER, TextAnchor.CENTER, 0.0));
                 }
             }
 
@@ -1546,15 +1548,14 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
                 DateFormat formatter = getDateFormatOverride();
                 if (formatter != null) {
                     tickLabel = formatter.format(tickDate);
-                }
-                else {
+                } else {
                     tickLabel = this.tickUnit.dateToString(tickDate);
                 }
+
                 TickLabelPosition pos = calculateHorizontalTickLabelPosition(edge);
 
                 DateTick tick = new DateTick(tickDate, tickLabel,
                         pos.anchor, pos.rotationAnchor, pos.angle);
-
 
                 result.add(tick);
                 hasRolled = false;
@@ -1562,8 +1563,7 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
                 long currentTickTime = tickDate.getTime();
                 tickDate = unit.addToDate(tickDate, this.timeZone);
                 long nextTickTime = tickDate.getTime();
-                for (int minorTick = 1; minorTick < minorTickSpaces;
-                        minorTick++) {
+                for (int minorTick = 1; minorTick < minorTickSpaces; minorTick++) {
                     long minorTickTime = currentTickTime
                             + (nextTickTime - currentTickTime)
                             * minorTick / minorTickSpaces;
@@ -1571,20 +1571,19 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
                             && (!isHiddenValue(minorTickTime))) {
                         result.add(new DateTick(TickType.MINOR,
                                 new Date(minorTickTime), "",
-                                TextAnchor.TOP_CENTER, TextAnchor.CENTER,
-                                0.0));
+                                TextAnchor.TOP_CENTER, TextAnchor.CENTER, 0.0));
                     }
                 }
 
-            }
-            else {
+            } else {
                 tickDate = unit.rollDate(tickDate, this.timeZone);
                 hasRolled = true;
             }
         }
         return result;
-
     }
+
+
 
     /**
      * Recalculates the ticks for the date axis.
@@ -1595,8 +1594,9 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
      *
      * @return A list of ticks.
      */
+
     protected List<? extends Tick> refreshTicksVertical(Graphics2D g2,
-            Rectangle2D dataArea, RectangleEdge edge) {
+                                                        Rectangle2D dataArea, RectangleEdge edge) {
 
         List<DateTick> result = new ArrayList<>();
 
@@ -1616,7 +1616,7 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
             // could add a flag to make the following correction optional...
             if (!hasRolled) {
                 tickDate = correctTickDateForPosition(tickDate, unit,
-                    this.tickMarkPosition);
+                        this.tickMarkPosition);
             }
 
             long lowestTickTime = tickDate.getTime();
@@ -1632,8 +1632,8 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
                 if (minorTickTime > 0 && getRange().contains(minorTickTime)
                         && (!isHiddenValue(minorTickTime))) {
                     result.add(new DateTick(TickType.MINOR,
-                            new Date(minorTickTime), "", TextAnchor.TOP_CENTER,
-                            TextAnchor.CENTER, 0.0));
+                            new Date(minorTickTime), "",
+                            TextAnchor.TOP_CENTER, TextAnchor.CENTER, 0.0));
                 }
             }
             if (!isHiddenValue(tickDate.getTime())) {
@@ -1642,28 +1642,26 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
                 DateFormat formatter = getDateFormatOverride();
                 if (formatter != null) {
                     tickLabel = formatter.format(tickDate);
-                }
-                else {
+                } else {
                     tickLabel = this.tickUnit.dateToString(tickDate);
                 }
-                TextAnchor anchor, rotationAnchor;
+
+                TextAnchor anchor;
+                TextAnchor rotationAnchor;
                 double angle = 0.0;
                 if (isVerticalTickLabels()) {
                     anchor = TextAnchor.BOTTOM_CENTER;
                     rotationAnchor = TextAnchor.BOTTOM_CENTER;
                     if (edge == RectangleEdge.LEFT) {
                         angle = -Math.PI / 2.0;
-                    }
-                    else {
+                    } else {
                         angle = Math.PI / 2.0;
                     }
-                }
-                else {
+                } else {
                     if (edge == RectangleEdge.LEFT) {
                         anchor = TextAnchor.CENTER_RIGHT;
                         rotationAnchor = TextAnchor.CENTER_RIGHT;
-                    }
-                    else {
+                    } else {
                         anchor = TextAnchor.CENTER_LEFT;
                         rotationAnchor = TextAnchor.CENTER_LEFT;
                     }
@@ -1677,8 +1675,7 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
                 long currentTickTime = tickDate.getTime();
                 tickDate = unit.addToDate(tickDate, this.timeZone);
                 long nextTickTime = tickDate.getTime();
-                for (int minorTick = 1; minorTick < minorTickSpaces;
-                        minorTick++) {
+                for (int minorTick = 1; minorTick < minorTickSpaces; minorTick++) {
                     long minorTickTime = currentTickTime
                             + (nextTickTime - currentTickTime)
                             * minorTick / minorTickSpaces;
@@ -1686,18 +1683,17 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
                             && (!isHiddenValue(minorTickTime))) {
                         result.add(new DateTick(TickType.MINOR,
                                 new Date(minorTickTime), "",
-                                TextAnchor.TOP_CENTER, TextAnchor.CENTER,
-                                0.0));
+                                TextAnchor.TOP_CENTER, TextAnchor.CENTER, 0.0));
                     }
                 }
-            }
-            else {
+            } else {
                 tickDate = unit.rollDate(tickDate, this.timeZone);
                 hasRolled = true;
             }
         }
         return result;
     }
+
 
     /**
      * Draws the axis on a Java 2D graphics device (such as the screen or a

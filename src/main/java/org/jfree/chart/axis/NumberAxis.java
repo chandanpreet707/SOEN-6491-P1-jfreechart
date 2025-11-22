@@ -898,6 +898,9 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
         double size = tu.getSize();
         int count = calculateVisibleTickCount();
         double lowestTickValue = calculateLowestVisibleTickValue();
+        double previousDrawnTickLabelPos = 0.0;
+        double previousDrawnTickLabelLength = 0.0;
+
 
         if (count <= ValueAxis.MAXIMUM_TICK_COUNT) {
             int minorTickSpaces = resolveMinorTickSpaces(tu);
@@ -913,34 +916,60 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
             }
             for (int i = 0; i < count; i++) {
                 double currentTickValue = lowestTickValue + (i * size);
+                double xx = valueToJava2D(currentTickValue, dataArea, edge);
+
                 String tickLabel;
                 NumberFormat formatter = getNumberFormatOverride();
                 if (formatter != null) {
                     tickLabel = formatter.format(currentTickValue);
-                }
-                else {
+                } else {
                     tickLabel = getTickUnit().valueToString(currentTickValue);
                 }
+
+                // avoid overlapping labels
+                boolean isFirstTick = (i == 0);
+                TickLabelOverlapState overlapState = handleHorizontalTickOverlap(
+                        g2,
+                        tickLabel,
+                        xx,
+                        isVerticalTickLabels(),
+                        previousDrawnTickLabelPos,
+                        previousDrawnTickLabelLength,
+                        isFirstTick
+                );
+
+                tickLabel = overlapState.getLabelToDraw();
+                previousDrawnTickLabelPos = overlapState.getLastDrawnPosition();
+                previousDrawnTickLabelLength = overlapState.getLastDrawnLength();
+
                 TickLabelPosition pos = calculateHorizontalTickLabelPosition(edge);
-
-                Tick tick = new NumberTick(currentTickValue,
-                        tickLabel, pos.anchor, pos.rotationAnchor, pos.angle);
-
-
+                Tick tick = new NumberTick(
+                        currentTickValue,
+                        tickLabel,
+                        pos.anchor,
+                        pos.rotationAnchor,
+                        pos.angle
+                );
                 result.add(tick);
+
                 double nextTickValue = lowestTickValue + ((i + 1) * size);
-                for (int minorTick = 1; minorTick < minorTickSpaces;
-                        minorTick++) {
+                for (int minorTick = 1; minorTick < minorTickSpaces; minorTick++) {
                     double minorTickValue = currentTickValue
                             + (nextTickValue - currentTickValue)
                             * minorTick / minorTickSpaces;
                     if (getRange().contains(minorTickValue)) {
-                        result.add(new NumberTick(TickType.MINOR,
-                                minorTickValue, "", TextAnchor.TOP_CENTER,
-                                TextAnchor.CENTER, 0.0));
+                        result.add(new NumberTick(
+                                TickType.MINOR,
+                                minorTickValue,
+                                "",
+                                TextAnchor.TOP_CENTER,
+                                TextAnchor.CENTER,
+                                0.0
+                        ));
                     }
                 }
             }
+
         }
         return result;
 
@@ -972,6 +1001,9 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
         double size = tu.getSize();
         int count = calculateVisibleTickCount();
         double lowestTickValue = calculateLowestVisibleTickValue();
+        double previousDrawnTickLabelPos = 0.0;
+        double previousDrawnTickLabelLength = 0.0;
+
 
         if (count <= ValueAxis.MAXIMUM_TICK_COUNT) {
             int minorTickSpaces = getMinorTickCount();
@@ -990,14 +1022,31 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
 
             for (int i = 0; i < count; i++) {
                 double currentTickValue = lowestTickValue + (i * size);
+                double yy = valueToJava2D(currentTickValue, dataArea, edge);
+
                 String tickLabel;
                 NumberFormat formatter = getNumberFormatOverride();
                 if (formatter != null) {
                     tickLabel = formatter.format(currentTickValue);
-                }
-                else {
+                } else {
                     tickLabel = getTickUnit().valueToString(currentTickValue);
                 }
+
+                // avoid overlapping labels
+                boolean isFirstTick = (i == 0);
+                TickLabelOverlapState overlapState = handleVerticalTickOverlap(
+                        g2,
+                        tickLabel,
+                        yy,
+                        isVerticalTickLabels(),
+                        previousDrawnTickLabelPos,
+                        previousDrawnTickLabelLength,
+                        isFirstTick
+                );
+
+                tickLabel = overlapState.getLabelToDraw();
+                previousDrawnTickLabelPos = overlapState.getLastDrawnPosition();
+                previousDrawnTickLabelLength = overlapState.getLastDrawnLength();
 
                 TextAnchor anchor;
                 TextAnchor rotationAnchor;
@@ -1007,41 +1056,48 @@ public class NumberAxis extends ValueAxis implements Cloneable, Serializable {
                         anchor = TextAnchor.BOTTOM_CENTER;
                         rotationAnchor = TextAnchor.BOTTOM_CENTER;
                         angle = -Math.PI / 2.0;
-                    }
-                    else {
+                    } else {
                         anchor = TextAnchor.BOTTOM_CENTER;
                         rotationAnchor = TextAnchor.BOTTOM_CENTER;
                         angle = Math.PI / 2.0;
                     }
-                }
-                else {
+                } else {
                     if (edge == RectangleEdge.LEFT) {
                         anchor = TextAnchor.CENTER_RIGHT;
                         rotationAnchor = TextAnchor.CENTER_RIGHT;
-                    }
-                    else {
+                    } else {
                         anchor = TextAnchor.CENTER_LEFT;
                         rotationAnchor = TextAnchor.CENTER_LEFT;
                     }
                 }
 
-                Tick tick = new NumberTick(currentTickValue, tickLabel, anchor, 
-                        rotationAnchor, angle);
+                Tick tick = new NumberTick(
+                        currentTickValue,
+                        tickLabel,
+                        anchor,
+                        rotationAnchor,
+                        angle
+                );
                 result.add(tick);
 
                 double nextTickValue = lowestTickValue + ((i + 1) * size);
-                for (int minorTick = 1; minorTick < minorTickSpaces;
-                        minorTick++) {
+                for (int minorTick = 1; minorTick < minorTickSpaces; minorTick++) {
                     double minorTickValue = currentTickValue
                             + (nextTickValue - currentTickValue)
                             * minorTick / minorTickSpaces;
                     if (getRange().contains(minorTickValue)) {
-                        result.add(new NumberTick(TickType.MINOR,
-                                minorTickValue, "", TextAnchor.TOP_CENTER,
-                                TextAnchor.CENTER, 0.0));
+                        result.add(new NumberTick(
+                                TickType.MINOR,
+                                minorTickValue,
+                                "",
+                                TextAnchor.TOP_CENTER,
+                                TextAnchor.CENTER,
+                                0.0
+                        ));
                     }
                 }
             }
+
         }
         return result;
 

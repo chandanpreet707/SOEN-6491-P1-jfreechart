@@ -538,32 +538,17 @@ public class SymbolAxis extends NumberAxis implements Serializable {
                 previousDrawnTickLabelLength = overlapState.getLastDrawnLength();
 
 
-                TextAnchor anchor;
-                TextAnchor rotationAnchor;
-                double angle = 0.0;
-                if (isVerticalTickLabels()) {
-                    anchor = TextAnchor.CENTER_RIGHT;
-                    rotationAnchor = TextAnchor.CENTER_RIGHT;
-                    if (edge == RectangleEdge.TOP) {
-                        angle = Math.PI / 2.0;
-                    }
-                    else {
-                        angle = -Math.PI / 2.0;
-                    }
-                }
-                else {
-                    if (edge == RectangleEdge.TOP) {
-                        anchor = TextAnchor.BOTTOM_CENTER;
-                        rotationAnchor = TextAnchor.BOTTOM_CENTER;
-                    }
-                    else {
-                        anchor = TextAnchor.TOP_CENTER;
-                        rotationAnchor = TextAnchor.TOP_CENTER;
-                    }
-                }
-                Tick tick = new NumberTick(currentTickValue, tickLabel, anchor, 
-                        rotationAnchor, angle);
+                ValueAxis.TickLabelPosition pos = calculateHorizontalTickLabelPosition(edge);
+
+                Tick tick = new NumberTick(
+                        currentTickValue,
+                        tickLabel,
+                        pos.anchor,
+                        pos.rotationAnchor,
+                        pos.angle
+                );
                 ticks.add(tick);
+
             }
         }
         return ticks;
