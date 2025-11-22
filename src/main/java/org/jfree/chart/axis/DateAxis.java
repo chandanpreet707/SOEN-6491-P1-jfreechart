@@ -775,178 +775,231 @@ public class DateAxis extends ValueAxis implements Cloneable, Serializable {
      * @return The previous "standard" date.
      */
     protected Date previousStandardDate(Date date, DateTickUnit unit) {
-
-        int milliseconds;
-        int seconds;
-        int minutes;
-        int hours;
-        int days;
-        int months;
-        int years;
-
         Calendar calendar = Calendar.getInstance(this.timeZone, this.locale);
         calendar.setTime(date);
+
         int count = unit.getMultiple();
         int current = calendar.get(unit.getCalendarField());
         int value = count * (current / count);
+        DateTickUnitType unitType = unit.getUnitType();
 
-        if (DateTickUnitType.MILLISECOND.equals(unit.getUnitType())) {
-            years = calendar.get(Calendar.YEAR);
-            months = calendar.get(Calendar.MONTH);
-            days = calendar.get(Calendar.DATE);
-            hours = calendar.get(Calendar.HOUR_OF_DAY);
-            minutes = calendar.get(Calendar.MINUTE);
-            seconds = calendar.get(Calendar.SECOND);
-            calendar.set(years, months, days, hours, minutes, seconds);
-            calendar.set(Calendar.MILLISECOND, value);
-            Date mm = calendar.getTime();
-            if (mm.getTime() >= date.getTime()) {
-                calendar.set(Calendar.MILLISECOND, value - count);
-                mm = calendar.getTime();
-            }
-            return mm;
+        if (DateTickUnitType.MILLISECOND.equals(unitType)) {
+            return previousStandardDateForMillisecond(date, calendar, count, value);
         }
-        else if (DateTickUnitType.SECOND.equals(unit.getUnitType())) {
-            years = calendar.get(Calendar.YEAR);
-            months = calendar.get(Calendar.MONTH);
-            days = calendar.get(Calendar.DATE);
-            hours = calendar.get(Calendar.HOUR_OF_DAY);
-            minutes = calendar.get(Calendar.MINUTE);
-            if (this.tickMarkPosition == DateTickMarkPosition.START) {
-                milliseconds = 0;
-            }
-            else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
-                milliseconds = 500;
-            }
-            else {
-                milliseconds = 999;
-            }
-            calendar.set(Calendar.MILLISECOND, milliseconds);
-            calendar.set(years, months, days, hours, minutes, value);
-            Date dd = calendar.getTime();
-            if (dd.getTime() >= date.getTime()) {
-                calendar.set(Calendar.SECOND, value - count);
-                dd = calendar.getTime();
-            }
-            return dd;
+        if (DateTickUnitType.SECOND.equals(unitType)) {
+            return previousStandardDateForSecond(date, calendar, count, value);
         }
-        else if (DateTickUnitType.MINUTE.equals(unit.getUnitType())) {
-            years = calendar.get(Calendar.YEAR);
-            months = calendar.get(Calendar.MONTH);
-            days = calendar.get(Calendar.DATE);
-            hours = calendar.get(Calendar.HOUR_OF_DAY);
-            if (this.tickMarkPosition == DateTickMarkPosition.START) {
-                seconds = 0;
-            }
-            else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
-                seconds = 30;
-            }
-            else {
-                seconds = 59;
-            }
-            calendar.clear(Calendar.MILLISECOND);
-            calendar.set(years, months, days, hours, value, seconds);
-            Date d0 = calendar.getTime();
-            if (d0.getTime() >= date.getTime()) {
-                calendar.set(Calendar.MINUTE, value - count);
-                d0 = calendar.getTime();
-            }
-            return d0;
+        if (DateTickUnitType.MINUTE.equals(unitType)) {
+            return previousStandardDateForMinute(date, calendar, count, value);
         }
-        else if (DateTickUnitType.HOUR.equals(unit.getUnitType())) {
-            years = calendar.get(Calendar.YEAR);
-            months = calendar.get(Calendar.MONTH);
-            days = calendar.get(Calendar.DATE);
-            if (this.tickMarkPosition == DateTickMarkPosition.START) {
-                minutes = 0;
-                seconds = 0;
-            }
-            else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
-                minutes = 30;
-                seconds = 0;
-            }
-            else {
-                minutes = 59;
-                seconds = 59;
-            }
-            calendar.clear(Calendar.MILLISECOND);
-            calendar.set(years, months, days, value, minutes, seconds);
-            Date d1 = calendar.getTime();
-            if (d1.getTime() >= date.getTime()) {
-                calendar.set(Calendar.HOUR_OF_DAY, value - count);
-                d1 = calendar.getTime();
-            }
-            return d1;
+        if (DateTickUnitType.HOUR.equals(unitType)) {
+            return previousStandardDateForHour(date, calendar, count, value);
         }
-        else if (DateTickUnitType.DAY.equals(unit.getUnitType())) {
-            years = calendar.get(Calendar.YEAR);
-            months = calendar.get(Calendar.MONTH);
-            if (this.tickMarkPosition == DateTickMarkPosition.START) {
-                hours = 0;
-            }
-            else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
-                hours = 12;
-            }
-            else {
-                hours = 23;
-            }
-            calendar.clear(Calendar.MILLISECOND);
-            calendar.set(years, months, value, hours, 0, 0);
-            // long result = calendar.getTimeInMillis();
-                // won't work with JDK 1.3
-            Date d2 = calendar.getTime();
-            if (d2.getTime() >= date.getTime()) {
-                calendar.set(Calendar.DATE, value - count);
-                d2 = calendar.getTime();
-            }
-            return d2;
+        if (DateTickUnitType.DAY.equals(unitType)) {
+            return previousStandardDateForDay(date, calendar, count, value);
         }
-        else if (DateTickUnitType.MONTH.equals(unit.getUnitType())) {
-            value = count * ((current + 1) / count) - 1;
-            years = calendar.get(Calendar.YEAR);
-            calendar.clear(Calendar.MILLISECOND);
-            calendar.set(years, value, 1, 0, 0, 0);
-            Month month = new Month(calendar.getTime(), this.timeZone,
-                    this.locale);
-            Date standardDate = calculateDateForPosition(
-                    month, this.tickMarkPosition);
-            long millis = standardDate.getTime();
-            if (millis >= date.getTime()) {
-                for (int i = 0; i < count; i++) {
-                    month = (Month) month.previous();
-                }
-                // need to peg the month in case the time zone isn't the
-                // default - see bug 2078057
-                month.peg(Calendar.getInstance(this.timeZone));
-                standardDate = calculateDateForPosition(
-                        month, this.tickMarkPosition);
-            }
-            return standardDate;
+        if (DateTickUnitType.MONTH.equals(unitType)) {
+            return previousStandardDateForMonth(date, calendar, count, current);
         }
-        else if (DateTickUnitType.YEAR.equals(unit.getUnitType())) {
-            if (this.tickMarkPosition == DateTickMarkPosition.START) {
-                months = 0;
-                days = 1;
-            }
-            else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
-                months = 6;
-                days = 1;
-            }
-            else {
-                months = 11;
-                days = 31;
-            }
-            calendar.clear(Calendar.MILLISECOND);
-            calendar.set(value, months, days, 0, 0, 0);
-            Date d3 = calendar.getTime();
-            if (d3.getTime() >= date.getTime()) {
-                calendar.set(Calendar.YEAR, value - count);
-                d3 = calendar.getTime();
-            }
-            return d3;
+        if (DateTickUnitType.YEAR.equals(unitType)) {
+            return previousStandardDateForYear(date, calendar, count, value);
         }
+
         return null;
     }
+
+    private Date previousStandardDateForMillisecond(Date date,
+                                                    Calendar calendar, int count, int value) {
+
+        int years = calendar.get(Calendar.YEAR);
+        int months = calendar.get(Calendar.MONTH);
+        int days = calendar.get(Calendar.DATE);
+        int hours = calendar.get(Calendar.HOUR_OF_DAY);
+        int minutes = calendar.get(Calendar.MINUTE);
+        int seconds = calendar.get(Calendar.SECOND);
+
+        calendar.set(years, months, days, hours, minutes, seconds);
+        calendar.set(Calendar.MILLISECOND, value);
+        Date mm = calendar.getTime();
+        if (mm.getTime() >= date.getTime()) {
+            calendar.set(Calendar.MILLISECOND, value - count);
+            mm = calendar.getTime();
+        }
+        return mm;
+    }
+
+    private Date previousStandardDateForSecond(Date date,
+                                               Calendar calendar, int count, int value) {
+
+        int years = calendar.get(Calendar.YEAR);
+        int months = calendar.get(Calendar.MONTH);
+        int days = calendar.get(Calendar.DATE);
+        int hours = calendar.get(Calendar.HOUR_OF_DAY);
+        int minutes = calendar.get(Calendar.MINUTE);
+
+        int milliseconds;
+        if (this.tickMarkPosition == DateTickMarkPosition.START) {
+            milliseconds = 0;
+        }
+        else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
+            milliseconds = 500;
+        }
+        else {
+            milliseconds = 999;
+        }
+
+        calendar.set(Calendar.MILLISECOND, milliseconds);
+        calendar.set(years, months, days, hours, minutes, value);
+        Date dd = calendar.getTime();
+        if (dd.getTime() >= date.getTime()) {
+            calendar.set(Calendar.SECOND, value - count);
+            dd = calendar.getTime();
+        }
+        return dd;
+    }
+
+    private Date previousStandardDateForMinute(Date date,
+                                               Calendar calendar, int count, int value) {
+
+        int years = calendar.get(Calendar.YEAR);
+        int months = calendar.get(Calendar.MONTH);
+        int days = calendar.get(Calendar.DATE);
+        int hours = calendar.get(Calendar.HOUR_OF_DAY);
+
+        int seconds;
+        if (this.tickMarkPosition == DateTickMarkPosition.START) {
+            seconds = 0;
+        }
+        else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
+            seconds = 30;
+        }
+        else {
+            seconds = 59;
+        }
+
+        calendar.clear(Calendar.MILLISECOND);
+        calendar.set(years, months, days, hours, value, seconds);
+        Date d0 = calendar.getTime();
+        if (d0.getTime() >= date.getTime()) {
+            calendar.set(Calendar.MINUTE, value - count);
+            d0 = calendar.getTime();
+        }
+        return d0;
+    }
+
+    private Date previousStandardDateForHour(Date date,
+                                             Calendar calendar, int count, int value) {
+
+        int years = calendar.get(Calendar.YEAR);
+        int months = calendar.get(Calendar.MONTH);
+        int days = calendar.get(Calendar.DATE);
+
+        int minutes;
+        int seconds;
+        if (this.tickMarkPosition == DateTickMarkPosition.START) {
+            minutes = 0;
+            seconds = 0;
+        }
+        else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
+            minutes = 30;
+            seconds = 0;
+        }
+        else {
+            minutes = 59;
+            seconds = 59;
+        }
+
+        calendar.clear(Calendar.MILLISECOND);
+        calendar.set(years, months, days, value, minutes, seconds);
+        Date d1 = calendar.getTime();
+        if (d1.getTime() >= date.getTime()) {
+            calendar.set(Calendar.HOUR_OF_DAY, value - count);
+            d1 = calendar.getTime();
+        }
+        return d1;
+    }
+
+    private Date previousStandardDateForDay(Date date,
+                                            Calendar calendar, int count, int value) {
+
+        int years = calendar.get(Calendar.YEAR);
+        int months = calendar.get(Calendar.MONTH);
+
+        int hours;
+        if (this.tickMarkPosition == DateTickMarkPosition.START) {
+            hours = 0;
+        }
+        else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
+            hours = 12;
+        }
+        else {
+            hours = 23;
+        }
+
+        calendar.clear(Calendar.MILLISECOND);
+        calendar.set(years, months, value, hours, 0, 0);
+        Date d2 = calendar.getTime();
+        if (d2.getTime() >= date.getTime()) {
+            calendar.set(Calendar.DATE, value - count);
+            d2 = calendar.getTime();
+        }
+        return d2;
+    }
+
+    private Date previousStandardDateForMonth(Date date,
+                                              Calendar calendar, int count, int current) {
+
+        int value = count * ((current + 1) / count) - 1;
+        int years = calendar.get(Calendar.YEAR);
+
+        calendar.clear(Calendar.MILLISECOND);
+        calendar.set(years, value, 1, 0, 0, 0);
+        Month month = new Month(calendar.getTime(), this.timeZone,
+                this.locale);
+        Date standardDate = calculateDateForPosition(
+                month, this.tickMarkPosition);
+        long millis = standardDate.getTime();
+        if (millis >= date.getTime()) {
+            for (int i = 0; i < count; i++) {
+                month = (Month) month.previous();
+            }
+            // need to peg the month in case the time zone isn't the
+            // default - see bug 2078057
+            month.peg(Calendar.getInstance(this.timeZone));
+            standardDate = calculateDateForPosition(
+                    month, this.tickMarkPosition);
+        }
+        return standardDate;
+    }
+
+    private Date previousStandardDateForYear(Date date,
+                                             Calendar calendar, int count, int value) {
+
+        int months;
+        int days;
+        if (this.tickMarkPosition == DateTickMarkPosition.START) {
+            months = 0;
+            days = 1;
+        }
+        else if (this.tickMarkPosition == DateTickMarkPosition.MIDDLE) {
+            months = 6;
+            days = 1;
+        }
+        else {
+            months = 11;
+            days = 31;
+        }
+
+        calendar.clear(Calendar.MILLISECOND);
+        calendar.set(value, months, days, 0, 0, 0);
+        Date d3 = calendar.getTime();
+        if (d3.getTime() >= date.getTime()) {
+            calendar.set(Calendar.YEAR, value - count);
+            d3 = calendar.getTime();
+        }
+        return d3;
+    }
+
 
     /**
      * Returns a {@link java.util.Date} corresponding to the specified position
