@@ -920,6 +920,95 @@ public class CategoryAxis extends Axis implements Cloneable, Serializable {
         return state;
 
     }
+    /**
+     * Creates the rectangular area used to render labels for a single
+     * category. This method centralises the coordinate logic that was
+     * previously duplicated in {@code CategoryAxis} and
+     * {@code SubCategoryAxis}.
+     *
+     * @param dataArea  the data area.
+     * @param edge  the axis location.
+     * @param state  the current axis state.
+     * @param categoryIndex  index of the category.
+     * @param categoryCount  total number of categories.
+     * @param bandDimension  the height (for horizontal axes) or width
+     *                       (for vertical axes) of the label band.
+     * @param positionOffset extra offset applied from the cursor towards
+     *                       the plot area (used by {@code CategoryAxis}
+     *                       for main labels; {@code SubCategoryAxis} passes 0).
+     * @param expandRightFromCursor flag that controls how the RIGHT edge
+     *                              coordinates are computed. {@code false}
+     *                              preserves the original {@code CategoryAxis}
+     *                              behaviour, {@code true} matches the
+     *                              previous {@code SubCategoryAxis} logic.
+     *
+     * @return The label area (never {@code null}).
+     */
+    //ANGAD
+    protected Rectangle2D createCategoryLabelArea(Rectangle2D dataArea,
+                                                  RectangleEdge edge, AxisState state,
+                                                  int categoryIndex, int categoryCount,
+                                                  double bandDimension, double positionOffset,
+                                                  boolean expandRightFromCursor) {
+
+        double x0 = 0.0;
+        double x1 = 0.0;
+        double y0 = 0.0;
+        double y1 = 0.0;
+
+        if (edge == RectangleEdge.TOP) {
+            x0 = getCategoryStart(categoryIndex, categoryCount, dataArea, edge);
+            x1 = getCategoryEnd(categoryIndex, categoryCount, dataArea, edge);
+            y1 = state.getCursor() - positionOffset;
+            y0 = y1 - bandDimension;
+        } else if (edge == RectangleEdge.BOTTOM) {
+            x0 = getCategoryStart(categoryIndex, categoryCount, dataArea, edge);
+            x1 = getCategoryEnd(categoryIndex, categoryCount, dataArea, edge);
+            y0 = state.getCursor() + positionOffset;
+            y1 = y0 + bandDimension;
+        } else if (edge == RectangleEdge.LEFT) {
+            y0 = getCategoryStart(categoryIndex, categoryCount, dataArea, edge);
+            y1 = getCategoryEnd(categoryIndex, categoryCount, dataArea, edge);
+            x1 = state.getCursor() - positionOffset;
+            x0 = x1 - bandDimension;
+        } else if (edge == RectangleEdge.RIGHT) {
+            y0 = getCategoryStart(categoryIndex, categoryCount, dataArea, edge);
+            y1 = getCategoryEnd(categoryIndex, categoryCount, dataArea, edge);
+            if (expandRightFromCursor) {
+                x0 = state.getCursor() + positionOffset;
+                x1 = x0 + bandDimension;
+            } else {
+                x0 = state.getCursor() + positionOffset;
+                x1 = x0 - bandDimension; // original CategoryAxis behaviour
+            }
+        }
+
+        return new Rectangle2D.Double(x0, y0, x1 - x0, y1 - y0);
+    }
+
+    /**
+     * Moves the cursor after labels have been drawn, based on the band
+     * dimension and the same offset used when computing the label area.
+     *
+     * @param state  the axis state.
+     * @param edge   the axis location.
+     * @param bandDimension  the label band height/width.
+     * @param positionOffset the offset applied from the cursor.
+     */
+    protected void updateCursorForCategoryLabels(AxisState state,
+                                                 RectangleEdge edge, double bandDimension, double positionOffset) {
+
+        double delta = bandDimension + positionOffset;
+        if (edge.equals(RectangleEdge.TOP)) {
+            state.cursorUp(delta);
+        } else if (edge.equals(RectangleEdge.BOTTOM)) {
+            state.cursorDown(delta);
+        } else if (edge == RectangleEdge.LEFT) {
+            state.cursorLeft(delta);
+        } else if (edge == RectangleEdge.RIGHT) {
+            state.cursorRight(delta);
+        }
+    }
 
     /**
      * Draws the category labels and returns the updated axis state.
@@ -943,10 +1032,13 @@ public class CategoryAxis extends Axis implements Cloneable, Serializable {
         if (!isTickLabelsVisible()) {
             return state;
         }
- 
+
         List ticks = refreshTicks(g2, state, plotArea, edge);
         state.setTicks(ticks);
+
+        int categoryCount = ticks.size();
         int categoryIndex = 0;
+
         for (Object o : ticks) {
             CategoryTick tick = (CategoryTick) o;
             g2.setFont(getTickLabelFont(tick.getCategory()));
@@ -954,54 +1046,35 @@ public class CategoryAxis extends Axis implements Cloneable, Serializable {
 
             CategoryLabelPosition position
                     = this.categoryLabelPositions.getLabelPosition(edge);
-            double x0 = 0.0;
-            double x1 = 0.0;
-            double y0 = 0.0;
-            double y1 = 0.0;
-            if (edge == RectangleEdge.TOP) {
-                x0 = getCategoryStart(categoryIndex, ticks.size(), dataArea, 
-                        edge);
-                x1 = getCategoryEnd(categoryIndex, ticks.size(), dataArea, 
-                        edge);
-                y1 = state.getCursor() - this.categoryLabelPositionOffset;
-                y0 = y1 - state.getMax();
-            }
-            else if (edge == RectangleEdge.BOTTOM) {
-                x0 = getCategoryStart(categoryIndex, ticks.size(), dataArea, 
-                        edge);
-                x1 = getCategoryEnd(categoryIndex, ticks.size(), dataArea, 
-                        edge);
-                y0 = state.getCursor() + this.categoryLabelPositionOffset;
-                y1 = y0 + state.getMax();
-            }
-            else if (edge == RectangleEdge.LEFT) {
-                y0 = getCategoryStart(categoryIndex, ticks.size(), dataArea, 
-                        edge);
-                y1 = getCategoryEnd(categoryIndex, ticks.size(), dataArea,
-                        edge);
-                x1 = state.getCursor() - this.categoryLabelPositionOffset;
-                x0 = x1 - state.getMax();
-            }
-            else if (edge == RectangleEdge.RIGHT) {
-                y0 = getCategoryStart(categoryIndex, ticks.size(), dataArea, 
-                        edge);
-                y1 = getCategoryEnd(categoryIndex, ticks.size(), dataArea,
-                        edge);
-                x0 = state.getCursor() + this.categoryLabelPositionOffset;
-                x1 = x0 - state.getMax();
-            }
-            Rectangle2D area = new Rectangle2D.Double(x0, y0, (x1 - x0),
-                    (y1 - y0));
-            Point2D anchorPoint = position.getCategoryAnchor().getAnchorPoint(area);
+
+            Rectangle2D area = createCategoryLabelArea(
+                    dataArea,
+                    edge,
+                    state,
+                    categoryIndex,
+                    categoryCount,
+                    state.getMax(),
+                    this.categoryLabelPositionOffset,
+                    false // keep original RIGHT-edge behaviour for CategoryAxis
+            );
+
+            Point2D anchorPoint = position.getCategoryAnchor()
+                    .getAnchorPoint(area);
             TextBlock block = tick.getLabel();
-            block.draw(g2, (float) anchorPoint.getX(),
-                    (float) anchorPoint.getY(), position.getLabelAnchor(),
-                    (float) anchorPoint.getX(), (float) anchorPoint.getY(),
+            block.draw(g2,
+                    (float) anchorPoint.getX(),
+                    (float) anchorPoint.getY(),
+                    position.getLabelAnchor(),
+                    (float) anchorPoint.getX(),
+                    (float) anchorPoint.getY(),
                     position.getAngle());
             Shape bounds = block.calculateBounds(g2,
-                    (float) anchorPoint.getX(), (float) anchorPoint.getY(),
-                    position.getLabelAnchor(), (float) anchorPoint.getX(),
-                    (float) anchorPoint.getY(), position.getAngle());
+                    (float) anchorPoint.getX(),
+                    (float) anchorPoint.getY(),
+                    position.getLabelAnchor(),
+                    (float) anchorPoint.getX(),
+                    (float) anchorPoint.getY(),
+                    position.getAngle());
             if (plotState != null && plotState.getOwner() != null) {
                 EntityCollection entities = plotState.getOwner()
                         .getEntityCollection();
@@ -1016,22 +1089,8 @@ public class CategoryAxis extends Axis implements Cloneable, Serializable {
             categoryIndex++;
         }
 
-        if (edge.equals(RectangleEdge.TOP)) {
-            double h = state.getMax() + this.categoryLabelPositionOffset;
-            state.cursorUp(h);
-        }
-        else if (edge.equals(RectangleEdge.BOTTOM)) {
-            double h = state.getMax() + this.categoryLabelPositionOffset;
-            state.cursorDown(h);
-        }
-        else if (edge == RectangleEdge.LEFT) {
-            double w = state.getMax() + this.categoryLabelPositionOffset;
-            state.cursorLeft(w);
-        }
-        else if (edge == RectangleEdge.RIGHT) {
-            double w = state.getMax() + this.categoryLabelPositionOffset;
-            state.cursorRight(w);
-        }
+        updateCursorForCategoryLabels(state, edge,
+                state.getMax(), this.categoryLabelPositionOffset);
         return state;
     }
 

@@ -289,44 +289,22 @@ public class SubCategoryAxis extends CategoryAxis
         for (int categoryIndex = 0; categoryIndex < categoryCount;
              categoryIndex++) {
 
-            double x0 = 0.0;
-            double x1 = 0.0;
-            double y0 = 0.0;
-            double y1 = 0.0;
-            if (edge == RectangleEdge.TOP) {
-                x0 = getCategoryStart(categoryIndex, categoryCount, dataArea,
-                        edge);
-                x1 = getCategoryEnd(categoryIndex, categoryCount, dataArea,
-                        edge);
-                y1 = state.getCursor();
-                y0 = y1 - maxdim;
-            }
-            else if (edge == RectangleEdge.BOTTOM) {
-                x0 = getCategoryStart(categoryIndex, categoryCount, dataArea,
-                        edge);
-                x1 = getCategoryEnd(categoryIndex, categoryCount, dataArea,
-                        edge);
-                y0 = state.getCursor();
-                y1 = y0 + maxdim;
-            }
-            else if (edge == RectangleEdge.LEFT) {
-                y0 = getCategoryStart(categoryIndex, categoryCount, dataArea,
-                        edge);
-                y1 = getCategoryEnd(categoryIndex, categoryCount, dataArea,
-                        edge);
-                x1 = state.getCursor();
-                x0 = x1 - maxdim;
-            }
-            else if (edge == RectangleEdge.RIGHT) {
-                y0 = getCategoryStart(categoryIndex, categoryCount, dataArea,
-                        edge);
-                y1 = getCategoryEnd(categoryIndex, categoryCount, dataArea,
-                        edge);
-                x0 = state.getCursor();
-                x1 = x0 + maxdim;
-            }
-            Rectangle2D area = new Rectangle2D.Double(x0, y0, (x1 - x0),
-                    (y1 - y0));
+            Rectangle2D area = createCategoryLabelArea(
+                    dataArea,
+                    edge,
+                    state,
+                    categoryIndex,
+                    categoryCount,
+                    maxdim,
+                    0.0,
+                    true // SubCategoryAxis expands RIGHT from the cursor
+            );
+
+            double x0 = area.getX();
+            double x1 = x0 + area.getWidth();
+            double y0 = area.getY();
+            double y1 = y0 + area.getHeight();
+
             int subCategoryCount = this.subCategories.size();
             float width = (float) ((x1 - x0) / subCategoryCount);
             float height = (float) ((y1 - y0) / subCategoryCount);
@@ -335,8 +313,7 @@ public class SubCategoryAxis extends CategoryAxis
                 if (RectangleEdge.isTopOrBottom(edge)) {
                     xx = (float) (x0 + (i + 0.5) * width);
                     yy = (float) area.getCenterY();
-                }
-                else {
+                } else {
                     xx = (float) area.getCenterX();
                     yy = (float) (y0 + (i + 0.5) * height);
                 }
@@ -346,25 +323,9 @@ public class SubCategoryAxis extends CategoryAxis
             }
         }
 
-        if (edge.equals(RectangleEdge.TOP)) {
-            double h = maxdim;
-            state.cursorUp(h);
-        }
-        else if (edge.equals(RectangleEdge.BOTTOM)) {
-            double h = maxdim;
-            state.cursorDown(h);
-        }
-        else if (edge == RectangleEdge.LEFT) {
-            double w = maxdim;
-            state.cursorLeft(w);
-        }
-        else if (edge == RectangleEdge.RIGHT) {
-            double w = maxdim;
-            state.cursorRight(w);
-        }
+        updateCursorForCategoryLabels(state, edge, maxdim, 0.0);
         return state;
     }
-
     /**
      * Tests the axis for equality with an arbitrary object.
      *
