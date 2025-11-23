@@ -146,9 +146,10 @@ public class CategoryAxis extends Axis implements Cloneable, Serializable {
     public CategoryAxis(String label) {
         super(label);
 
-        this.lowerMargin = DEFAULT_AXIS_MARGIN;
-        this.upperMargin = DEFAULT_AXIS_MARGIN;
-        this.categoryMargin = DEFAULT_CATEGORY_MARGIN;
+        //MT2-Original: Issue #388 fix.
+        this.lowerMargin = 0.0;
+        this.upperMargin = 0.0;
+        this.categoryMargin = 0.0;
         this.maximumCategoryLabelLines = 1;
         this.maximumCategoryLabelWidthRatio = 0.0f;
 
